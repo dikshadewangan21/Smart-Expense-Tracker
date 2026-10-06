@@ -42,31 +42,38 @@ function Empty({ text }: { text: string }) {
 export default function Dashboard() {
   const [data, setData] = useState<Dash | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [safe, setSafe] = useState<{ safe_to_spend_daily: number; safe_to_spend_total: number; days_left_in_month: number } | null>(null)
 
-  const load = () => { setError(null); api<Dash>('/dashboard').then(setData).catch((e) => setError(e.message)) }
+  const load = () => {
+    setError(null)
+    api<Dash>('/dashboard').then(setData).catch((e) => setError(e.message))
+    api<{ safe_to_spend_daily: number; safe_to_spend_total: number; days_left_in_month: number }>('/planning/safe-to-spend')
+      .then(setSafe).catch(() => {})
+  }
   useEffect(load, [])
 
   if (error) return <div className="card" role="alert">{error} <button className="btn ml-2" onClick={load}>Retry</button></div>
   if (!data) return <Skeleton />
 
   const c = data.cards, cur = data.currency
-  const stat = (label: string, v: number | null, tone?: boolean) => (
+  const stat = (label: string, v: number | null, tone?: boolean, sub?: string) => (
     <div className="card" key={label}>
       <div className="muted text-sm">{label}</div>
       <div className="text-2xl font-bold" style={tone && v !== null ? { color: v < 0 ? 'var(--bad)' : 'var(--good)' } : {}}>{money(v, cur)}</div>
+      {sub && <div className="muted text-xs mt-1">{sub}</div>}
     </div>
   )
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-bold">Dashboard</h1>
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stat('Total balance', c.total_balance)}
-        {stat("This month's income", c.month_income)}
         {stat("This month's expenses", c.month_expenses)}
         {stat('Savings', c.savings, true)}
-        {stat('Budget remaining', c.budget_remaining, true)}
         {stat('Net worth', c.net_worth, true)}
+        {safe && stat('Safe to Spend Daily', safe.safe_to_spend_daily, true, `${money(safe.safe_to_spend_total, cur)} left over ${safe.days_left_in_month} days`)}
+        {stat('Budget remaining', c.budget_remaining, true)}
       </div>
       {c.budget_remaining === null && <p className="muted text-sm">No budget set for this month yet.</p>}
 

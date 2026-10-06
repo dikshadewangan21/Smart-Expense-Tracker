@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.routers import analytics, auth, bills, dashboard, debts, goals, networth, planning, recurring, transactions
+from app.routers import (
+    analytics, auth, bills, coach, dashboard, debts, goals,
+    imports, networth, notifications, planning, privacy, receipts,
+    recurring, shared, transactions
+)
 
 log = logging.getLogger("app")
 
@@ -16,7 +20,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[get_settings().frontend_origin],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -30,6 +34,12 @@ app.include_router(bills.router, prefix="/api")
 app.include_router(goals.router, prefix="/api")
 app.include_router(debts.router, prefix="/api")
 app.include_router(networth.router, prefix="/api")
+app.include_router(imports.router, prefix="/api")
+app.include_router(receipts.router, prefix="/api")
+app.include_router(coach.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
+app.include_router(shared.router, prefix="/api")
+app.include_router(privacy.router, prefix="/api")
 
 
 @app.exception_handler(Exception)

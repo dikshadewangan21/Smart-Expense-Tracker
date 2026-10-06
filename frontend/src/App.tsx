@@ -14,6 +14,11 @@ import NetWorth from './pages/NetWorth'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import TxForm from './pages/TxForm'
+import ImportCenter from './pages/ImportCenter'
+import MoneyCoach from './pages/MoneyCoach'
+import SharedFinances from './pages/SharedFinances'
+import Categories from './pages/Categories'
+import Privacy from './pages/Privacy'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -33,14 +38,19 @@ export default function App() {
         <Route path="/add-expense" element={<TxForm kind="expense" />} />
         <Route path="/add-income" element={<TxForm kind="income" />} />
         <Route path="/add-transfer" element={<TxForm kind="transfer" />} />
+        <Route path="/coach" element={<MoneyCoach />} />
+        <Route path="/imports" element={<ImportCenter />} />
         <Route path="/budgets" element={<Budgets />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/shared" element={<SharedFinances />} />
+        <Route path="/categories" element={<Categories />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/bills" element={<Bills />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/debts" element={<Debts />} />
         <Route path="/net-worth" element={<NetWorth />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

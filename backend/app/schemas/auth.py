@@ -27,8 +27,24 @@ class UserOut(BaseModel):
     timezone: str
     onboarded: bool
     is_demo: bool
+    monthly_income: float | None = None
+    monthly_savings_target: float | None = None
+    budgeting_style: str = "balanced"
 
     model_config = {"from_attributes": True}
+
+
+class OnboardingIn(BaseModel):
+    name: str | None = Field(default=None, max_length=120)
+    currency: str = Field(default="INR", min_length=3, max_length=3)
+    timezone: str = Field(default="Asia/Kolkata", max_length=64)
+    monthly_income: float | None = Field(default=None, ge=0)
+    income_frequency: str = Field(default="monthly", max_length=20)
+    monthly_savings_target: float | None = Field(default=None, ge=0)
+    budgeting_style: str = Field(default="balanced", max_length=30)
+    initial_account_name: str | None = Field(default=None, max_length=120)
+    initial_account_kind: str | None = Field(default="bank", max_length=20)
+    initial_account_balance: float | None = Field(default=0)
 
 
 class ProfileUpdate(BaseModel):

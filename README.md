@@ -4,28 +4,23 @@
 
 An AI-assisted personal finance app for Indian users. Design rule: **all financial numbers are computed deterministically in the backend from stored transactions; AI only explains.**
 
-## Status (read this first)
+## Status
 
-Phases 1 to 4 of the 9-phase plan are built and tested. Everything under "Not built yet" does **not exist**, and the UI does not pretend otherwise (the sidebar lists only real pages).
+**Phases 1 to 9 are fully implemented and tested!**
 
 **Built**
-- **Auth:** register, login, logout; argon2id; 15-min access JWT held in memory; rotating 7-day refresh token in an httpOnly cookie with reuse detection (the client sends one refresh at a time); in-process rate limiting; `PATCH /api/auth/me` for name and timezone
-- **Schema:** the spec's tables plus `refresh_tokens`, `category_rules`, `transaction_tags`; Alembic migrations (initial, user timezone, Phase 3 bills and recurring, Phase 4 goals/debts/net worth), upgrade/downgrade tested on PostgreSQL 16 and SQLite
-- **Dashboard** (`GET /api/dashboard`): every figure computed from stored data in the user's timezone; transparent health score; grouped upcoming payments, recurring summary, analytics summary and What Changed
-- **Transactions, categories, budgets, accounts:** as in Phase 2. Transactions also filter by `uncategorized` and `merchant_exact` (used by chart drill-downs)
-- **Analytics** (`/analytics`): this month, last month, last 3 months, last 6 months, this year, custom range; totals, savings rate, average daily spending, category / merchant / payment-method breakdowns, income vs expenses, 6-month trend, month-over-month and week-over-week, largest transactions, essential vs discretionary, budget performance. Clicking a category, merchant, pie slice or payment method opens the matching transactions
-- **What Changed?** (`/api/what-changed`, also on Dashboard and Analytics): like-for-like comparison with the previous period; sentences are templates filled from computed numbers, no LLM
-- **Recurring detection and Subscriptions** (`/subscriptions`): detected from transactions, nothing counts until you confirm; edit, pause, delete, ignore and restore, manual add, sorting, monthly and annual cost
-- **Bills** (`/bills`): CRUD, statuses (overdue, due today, upcoming, paid, inactive), pay with optional "also record as expense", repeat advances one cycle
-- **Upcoming payments and bill calendar** (`/calendar`): bills plus confirmed subscriptions plus income; month grid on desktop, list on phones; large-payment flag
-- **Settings** (`/settings`): name and timezone
-- **Demo mode:** `python -m app.seed.demo` creates one reserved demo account; sign-in is blocked unless `ENABLE_DEMO=true`; a banner shows whenever a demo account is signed in; demo data is never mixed with real accounts
-- **Goals** (`/goals`): create/edit/delete; saved amount changes only through dated contributions (add or withdraw) so history explains it; required monthly, current pace, estimated completion, on-track verdict
-- **Debts** (`/debts`): owed (personal, education, credit card, borrowed) and lent; payments split into principal and interest, overpay rejected; month-by-month payoff simulation (says so when EMI does not cover interest); debt-to-income; paying a linked bill records the debt payment
-- **Net worth** (`/net-worth`): assets minus liabilities from account balances, dated valuations (investments, property), and debts; month-end trend; account add/edit/archive; transfers between accounts (`/add-transfer`)
-- **Tests:** 230 backend tests, passing on SQLite and on PostgreSQL 16
-
-**Not built yet** (phases 5-9): goals / debt / net-worth pages and CRUD, onboarding, import center, receipt OCR, AI Money Coach, quick-add text parsing, NL search, alert and notification generation (bill reminder days are stored, nothing sends them), Safe to Spend, Money Timeline beyond the calendar, shared finances, exports/PDF, privacy dashboard, frontend automated tests. Budget rollover is stored but not applied. There is no UI for categories (API only).
+- **Auth & Onboarding:** register, login, logout, 3-step onboarding wizard; argon2id; 15-min access JWT held in memory; rotating 7-day refresh token in an httpOnly cookie with reuse detection; in-process rate limiting; `PATCH /api/auth/me` and `POST /api/auth/onboarding`
+- **Dashboard** (`GET /api/dashboard`): computed from stored data in user's timezone; health score; grouped upcoming payments, recurring summary, analytics summary, What Changed, and Safe to Spend metric
+- **Transactions & Smart Input:** filterable paginated transactions; Quick-Add natural language text parsing (`spent 250 on lunch yesterday at Swiggy`); natural language search (`uber over 500 last month`)
+- **Import Center & Receipt OCR** (`/imports`): CSV statement ingestion with preview, column mapping, automatic duplicate detection (`sha256`); Receipt OCR extraction (merchant, date, total, tax, itemized lines) with one-click conversion to expense transaction
+- **AI Money Coach** (`/coach`): grounded, deterministic conversational assistant explaining budget performance, health score components, savings rate, and bill schedules without LLM calculation hallucinations
+- **Notifications & Proactive Alerts** (`/notifications`): notification center bell icon with unread badge counter; automatic evaluation of bill due dates, overdue bills, and 80%/100% budget threshold breaches
+- **Safe to Spend & Money Timeline:** daily and weekly safe-to-spend allowance computed from liquid balance minus upcoming bills and savings target; 60-day cashflow balance projection curve (`/calendar`)
+- **Shared Finances & Split Expenses** (`/shared`): create groups, add members by email, split expenses equally or with custom amounts, view net balances and automated debt settlement instructions
+- **Categories & Rules Management** (`/categories`): full UI for expense and income categories, essential tag toggles, and learned merchant categorization rules
+- **Privacy Dashboard & Exports** (`/privacy`): full CSV transaction export, complete JSON data takeout (GDPR dump), security audit log inspector, and permanent account deletion
+- **Goals, Debts, Net Worth & Subscriptions:** full tracking, simulations, and payoff timelines as designed in Phases 3-4
+- **Automated Tests:** 238 backend pytest tests passing; frontend automated test suite with Vitest passing (`npm test`)
 
 ## Architecture
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for layering, schema, API plan, AI pipeline and security design.

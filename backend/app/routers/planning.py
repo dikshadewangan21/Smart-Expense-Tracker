@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
-from app.models.core import Account, Budget, BudgetCategory, Category, User
+from app.models.core import Account, Budget, BudgetCategory, Category, CategoryRule, User
 from app.routers.dashboard import user_today
 from app.services.dashboard import budget_status, month_start
+from app.services import safe_to_spend
 
 router = APIRouter(tags=["planning"])
 Money = Field(max_digits=12, decimal_places=2)
@@ -84,6 +85,58 @@ def create_category(body: CategoryIn, user: User = Depends(get_current_user), db
     return cat
 
 
+@router.put("/categories/{category_id}", response_model=CategoryOut, summary="Update category name or essential flag")
+def update_category(category_id: int, body: CategoryIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    cat = db.scalar(select(Category).where(Category.id == category_id, Category.user_id == user.id))
+    if not cat:
+        raise HTTPException(404, "Category not found.")
+    name = body.name.strip()
+    existing = db.scalar(select(Category.id).where(Category.user_id == user.id, Category.name == name, Category.kind == body.kind, Category.id != category_id))
+    if existing:
+        raise HTTPException(409, "A category with that name already exists.")
+    cat.name = name
+    cat.kind = body.kind
+    cat.essential = body.essential
+    db.commit()
+    return cat
+
+
+@router.delete("/categories/{category_id}", status_code=204, summary="Delete a category")
+def delete_category(category_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    cat = db.scalar(select(Category).where(Category.id == category_id, Category.user_id == user.id))
+    if not cat:
+        raise HTTPException(404, "Category not found.")
+    db.delete(cat)
+    db.commit()
+
+
+@router.get("/categories/rules", summary="List learned merchant categorization rules")
+def list_category_rules(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(CategoryRule, Category.name)
+        .join(Category, Category.id == CategoryRule.category_id)
+        .where(CategoryRule.user_id == user.id)
+        .order_by(CategoryRule.merchant_key)
+    ).all()
+    return [{
+        "id": r.id,
+        "merchant_key": r.merchant_key,
+        "category_id": r.category_id,
+        "category_name": cat_name,
+        "created_at": r.created_at,
+    } for r, cat_name in rows]
+
+
+@router.delete("/categories/rules/{rule_id}", status_code=204, summary="Delete a merchant categorization rule")
+def delete_category_rule(rule_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rule = db.scalar(select(CategoryRule).where(CategoryRule.id == rule_id, CategoryRule.user_id == user.id))
+    if not rule:
+        raise HTTPException(404, "Rule not found.")
+    db.delete(rule)
+    db.commit()
+
+
+
 # ---- budgets ----
 class BudgetLine(BaseModel):
     category_id: int
@@ -129,3 +182,16 @@ def upsert_budget(body: BudgetIn, user: User = Depends(get_current_user), db: Se
         db.add(BudgetCategory(budget_id=budget.id, category_id=line.category_id, limit_amount=line.limit_amount))
     db.commit()
     return {"month": m, "budget": budget_status(db, user.id, m)}
+
+
+@router.get("/planning/safe-to-spend", summary="Calculate safe to spend allowance based on liquidity and upcoming bills")
+def get_safe_to_spend(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today = user_today(user)
+    return safe_to_spend.calculate_safe_to_spend(db, user, today)
+
+
+@router.get("/planning/timeline", summary="Cashflow projection timeline extending 30-90 days into the future")
+def get_cashflow_timeline(days: int = 60, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today = user_today(user)
+    return safe_to_spend.calculate_cashflow_timeline(db, user, today, min(max(days, 14), 180))
+

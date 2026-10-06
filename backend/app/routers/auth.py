@@ -10,8 +10,8 @@ from app.core.rate_limit import rate_limit
 from app.core.security import (create_access_token, hash_password, hash_refresh_token,
                                new_refresh_token, verify_password)
 from app.db.session import get_db
-from app.models.core import AuditLog, RefreshToken, User
-from app.schemas.auth import LoginIn, ProfileUpdate, RegisterIn, TokenOut, UserOut
+from app.models.core import Account, AuditLog, RefreshToken, User
+from app.schemas.auth import LoginIn, OnboardingIn, ProfileUpdate, RegisterIn, TokenOut, UserOut
 from app.services.categories import seed_default_categories
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -112,5 +112,41 @@ def update_me(body: ProfileUpdate, user: User = Depends(get_current_user), db: S
     if body.timezone is not None:
         user.timezone = body.timezone
     db.add(AuditLog(user_id=user.id, action="profile_update", detail=",".join(sorted(body.model_fields_set))[:200]))
+    db.commit()
+    return user
+
+
+@router.post("/onboarding", response_model=UserOut, summary="Complete user onboarding and preferences setup")
+def complete_onboarding(body: OnboardingIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if body.name:
+        user.name = body.name
+    if body.currency:
+        user.currency = body.currency.upper()
+    if body.timezone:
+        user.timezone = body.timezone
+    if body.monthly_income is not None:
+        user.monthly_income = body.monthly_income
+    if body.income_frequency:
+        user.income_frequency = body.income_frequency
+    if body.monthly_savings_target is not None:
+        user.monthly_savings_target = body.monthly_savings_target
+    if body.budgeting_style:
+        user.budgeting_style = body.budgeting_style
+
+    user.onboarded = True
+
+    # Optionally seed initial account if provided
+    if body.initial_account_name:
+        existing_acc = db.scalar(select(Account).where(Account.user_id == user.id, Account.name == body.initial_account_name))
+        if not existing_acc:
+            acc = Account(
+                user_id=user.id,
+                name=body.initial_account_name,
+                kind=body.initial_account_kind or "bank",
+                opening_balance=body.initial_account_balance or 0,
+            )
+            db.add(acc)
+
+    db.add(AuditLog(user_id=user.id, action="onboarding_complete"))
     db.commit()
     return user
