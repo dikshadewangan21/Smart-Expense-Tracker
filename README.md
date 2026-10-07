@@ -1,80 +1,328 @@
-# Smart Expense Tracker
+# 💰 Smart Expense Tracker
+
+<div align="center">
 
 *Track less. Understand more. Save smarter.*
 
-An AI-assisted personal finance app for Indian users. Design rule: **all financial numbers are computed deterministically in the backend from stored transactions; AI only explains.**
+An intelligent, full-stack personal finance application built specifically for modern financial workflows.
 
-## Status
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![React](https://img.shields.io/badge/React-19.2+-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00?style=flat&logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org)
+[![Alembic](https://img.shields.io/badge/Alembic-1.14+-red?style=flat)](https://alembic.sqlalchemy.org)
+[![Tests](https://img.shields.io/badge/Tests-238%20Passed-success?style=flat&logo=pytest&logoColor=white)](https://docs.pytest.org)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat)](LICENSE)
 
-**Phases 1 to 9 are fully implemented and tested!**
+[Features](#-key-features) •
+[Architecture](#-architecture) •
+[Tech Stack](#-tech-stack) •
+[Quick Start](#-quick-start) •
+[Demo Mode](#-demo-mode) •
+[Testing](#-testing) •
+[API Reference](#-api-overview)
 
-**Built**
-- **Auth & Onboarding:** register, login, logout, 3-step onboarding wizard; argon2id; 15-min access JWT held in memory; rotating 7-day refresh token in an httpOnly cookie with reuse detection; in-process rate limiting; `PATCH /api/auth/me` and `POST /api/auth/onboarding`
-- **Dashboard** (`GET /api/dashboard`): computed from stored data in user's timezone; health score; grouped upcoming payments, recurring summary, analytics summary, What Changed, and Safe to Spend metric
-- **Transactions & Smart Input:** filterable paginated transactions; Quick-Add natural language text parsing (`spent 250 on lunch yesterday at Swiggy`); natural language search (`uber over 500 last month`)
-- **Import Center & Receipt OCR** (`/imports`): CSV statement ingestion with preview, column mapping, automatic duplicate detection (`sha256`); Receipt OCR extraction (merchant, date, total, tax, itemized lines) with one-click conversion to expense transaction
-- **AI Money Coach** (`/coach`): grounded, deterministic conversational assistant explaining budget performance, health score components, savings rate, and bill schedules without LLM calculation hallucinations
-- **Notifications & Proactive Alerts** (`/notifications`): notification center bell icon with unread badge counter; automatic evaluation of bill due dates, overdue bills, and 80%/100% budget threshold breaches
-- **Safe to Spend & Money Timeline:** daily and weekly safe-to-spend allowance computed from liquid balance minus upcoming bills and savings target; 60-day cashflow balance projection curve (`/calendar`)
-- **Shared Finances & Split Expenses** (`/shared`): create groups, add members by email, split expenses equally or with custom amounts, view net balances and automated debt settlement instructions
-- **Categories & Rules Management** (`/categories`): full UI for expense and income categories, essential tag toggles, and learned merchant categorization rules
-- **Privacy Dashboard & Exports** (`/privacy`): full CSV transaction export, complete JSON data takeout (GDPR dump), security audit log inspector, and permanent account deletion
-- **Goals, Debts, Net Worth & Subscriptions:** full tracking, simulations, and payoff timelines as designed in Phases 3-4
-- **Automated Tests:** 238 backend pytest tests passing; frontend automated test suite with Vitest passing (`npm test`)
+</div>
 
-## Architecture
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for layering, schema, API plan, AI pipeline and security design.
+---
 
-## Local setup
+## 💡 Philosophy & Core Design Rule
+
+Most financial apps either drown you in manual data entry or use LLMs that invent made-up calculations. **Smart Expense Tracker is built on a fundamental design rule:**
+
+> **All financial calculations and arithmetic are computed 100% deterministically in the backend from verified database records.**
+> **AI and LLMs only explain and contextualize pre-computed figures—they never calculate, extrapolate, or hallucinate numbers.**
+
+- **Precision First:** All monetary values are handled using fixed-point `Decimal` (`NUMERIC(14,2)` in SQL). Floating-point math is strictly forbidden.
+- **Privacy by Default:** Zero tracking, full data takeout in JSON, one-click CSV exports, and complete GDPR account erasure.
+- **Indian Number Grouping Support:** Native support for Indian Lakhs/Crores digit grouping (`₹1,23,456.50`) alongside international standards.
+
+---
+
+## 🚀 Key Features (Phases 1–9 Complete)
+
+### 📊 1. Intelligent Dashboard & Financial Health Score
+- **Live Cash Flow & Balance:** Real-time visibility into total liquid balance, monthly income, monthly expenses, and net savings.
+- **5-Pillar Financial Health Score (0–100):** Transparent scoring evaluated across savings rate (30 pts), budget adherence (25 pts), recurring commitment burden (15 pts), debt load (15 pts), and emergency fund status (15 pts). Every point is accompanied by a plain-English explanation.
+- **"What Changed?" Engine:** Automated like-for-like period comparison highlighting the exact spending drivers without relying on LLM summaries.
+
+### ⚡ 2. Smart Input & Transactions
+- **Quick-Add Natural Language Input:** Type freeform sentences like `spent 450 at Swiggy yesterday via upi` or `received 50000 salary today` to automatically extract merchant, amount, category, date, and payment method.
+- **Natural Language Search:** Search your finances conversationally (`uber over 500 last month`, `swiggy upi this month`).
+- **Comprehensive Filtering:** Filter by date range, merchant, category, account, payment method, tags, or unclassified items.
+- **Transfer Handling:** Account-to-account transfers adjust balances without distorting income/expense metrics.
+
+### 🤖 3. AI Money Coach
+- **Grounded Financial Assistant:** Conversational AI coach with access to real calculated metrics (budget headroom, savings rate, pending bills, liabilities).
+- **Extensible Provider Architecture:** Plug-and-play support for local deterministic explanations, OpenAI, Anthropic, or Google Gemini.
+- **Conversation History:** Multi-session chats with suggested follow-up prompts and context summaries.
+
+### 📥 4. Import Center & Receipt OCR Scanner
+- **CSV Bank & Card Statement Ingestion:** Smart header recognition supporting HDFC, ICICI, SBI, Axis, AMEX, and custom CSV layouts.
+- **Cryptographic Deduplication:** Uses `sha256(user_id:date:amount:merchant:type:account_id)` to prevent duplicate entries even if the same file is uploaded multiple times.
+- **Receipt OCR Engine:** Upload photo receipts or invoices to extract merchant, invoice date, taxes, line items, and total amount with one-click conversion into expense records.
+
+### 🔔 5. Proactive Notifications & Alert Center
+- **Bill Reminders:** Automatic notifications triggered according to customized bill reminder schedules (e.g. 7 days, 3 days, 1 day, or day of due date).
+- **Overdue Bill Warnings:** High-priority alerts for unpaid bills past their due date.
+- **Budget Threshold Alerts:** Real-time warnings when reaching 80% or exceeding 100% of category or monthly budgets.
+- **Notification Center UI:** Header bell icon with real-time unread badge, dropdown list, and one-click "Mark all read".
+
+### 🛡️ 6. Safe to Spend & Money Timeline
+- **Safe-to-Spend Calculator:** Dynamically computes daily and weekly spending allowances by subtracting upcoming bills and savings targets from current liquid accounts.
+- **60-Day Cashflow Curve:** Forward-looking interactive projection curve that charts expected balance trajectories based on salary schedules, recurring charges, and average daily burn rates.
+
+### 👥 7. Shared Finances & Split Expenses
+- **Shared Groups:** Create groups for roommates, vacations, couples, or events.
+- **Equal & Custom Splits:** Add group expenses split evenly or with custom allocations.
+- **Minimal Debt Settlement Algorithm:** Automatically calculates net balances and generates the fewest payment steps to settle all debts.
+
+### 🏷️ 8. Categories & Learned Categorization Rules
+- **Full Category Management:** Create, rename, customize, and delete expense and income categories.
+- **Essential vs. Discretionary:** Flag essential categories (rent, groceries, healthcare) for automatic budget split analysis.
+- **Merchant Rule Engine:** Learns merchant-to-category associations as you edit transactions to automate future classification.
+
+### 🎯 9. Savings Goals, Debts & Net Worth
+- **Savings Goals:** Multi-pot goal tracking with dated contribution histories, monthly savings pace, and estimated completion dates.
+- **Debt Payoff Simulator:** Amortization simulation tracking principal vs. interest splits, EMI commitments, and debt-to-income ratios.
+- **Net Worth Tracking:** Real-time assets vs. liabilities tracking with manual valuations for investments and properties.
+
+### 🔒 10. Privacy & Data Takeout
+- **CSV Spreadsheet Export:** Export your entire transaction history to Excel/Google Sheets.
+- **Full GDPR Data Dump:** Complete JSON takeout of all profile data, accounts, transactions, bills, goals, and debts.
+- **Security Audit Logs:** Transparent audit trail recording logins, profile edits, deletions, and payments.
+- **Account Deletion:** Password-confirmed permanent erasure of all user data and cascading records.
+
+---
+
+## 🏗️ Architecture
+
+The project follows a clean, decoupled architecture:
+
+```
+[ Frontend: React 19 + TypeScript + Vite + Tailwind CSS v4 ]
+                          │
+                   HTTPS / JSON API
+                          │
+     ┌────────────────────▼────────────────────┐
+     │           FastAPI Application           │
+     │  - HTTP routing & Pydantic validation   │
+     │  - JWT Auth + Rotating Refresh Cookies  │
+     │  - Rate Limiting & Security Middlewares │
+     └────────────────────┬────────────────────┘
+                          │
+     ┌────────────────────▼────────────────────┐
+     │         Business Logic Services         │
+     │  - Deterministic Math & Financial SQL   │
+     │  - Safe-to-Spend & Timeline Calculators │
+     │  - Bill Scheduling & Notification Engine│
+     │  - Split Expense Settlement Solver      │
+     └────────────────────┬────────────────────┘
+                          │
+     ┌────────────────────▼────────────────────┐
+     │        SQLAlchemy 2.0 ORM Layer         │
+     │  - Multi-tenant Scoping (user_id FK)    │
+     │  - Strict Numeric(14,2) for Money       │
+     │  - Alembic Versioned Migrations         │
+     └────────────────────┬────────────────────┘
+                          │
+         ┌────────────────┴────────────────┐
+         ▼                                 ▼
+   SQLite (Dev/Test)             PostgreSQL 16 (Prod)
+```
+
+### Directory Structure
+
+```
+smart-expense-tracker/
+├── backend/
+│   ├── alembic/              # Database migration versions
+│   ├── app/
+│   │   ├── core/             # Config, security, JWT, rate limit, clock, money utilities
+│   │   ├── db/               # Database engine and session factory
+│   │   ├── models/           # SQLAlchemy 2.0 declarative database models
+│   │   ├── providers/        # OCR and AI Money Coach provider interfaces
+│   │   │   ├── ai/           # Deterministic, OpenAI, Gemini, Anthropic providers
+│   │   │   └── ocr/          # Heuristic receipt parser & OCR extractor
+│   │   ├── routers/          # FastAPI routers (auth, transactions, coach, imports, etc.)
+│   │   ├── schemas/          # Pydantic v2 validation models
+│   │   ├── seed/             # Deterministic demo data seeder
+│   │   ├── services/         # Deterministic financial calculators and business logic
+│   │   └── main.py           # Application entrypoint & CORS configuration
+│   ├── tests/                # 238 Pytest unit & integration test cases
+│   └── requirements.txt      # Python dependencies
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # Shared UI (Layout, Modal, Stat, ErrorBox, etc.)
+│   │   ├── lib/              # API client, Auth context, formatters, types
+│   │   ├── pages/            # Feature pages (Dashboard, Coach, Imports, Shared, etc.)
+│   │   └── __tests__/        # Vitest frontend automated tests
+│   ├── package.json          # Node dependencies
+│   └── vite.config.ts        # Vite configuration with API proxy
+└── docs/
+    └── ARCHITECTURE.md       # In-depth architectural & financial specs
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend Framework** | **FastAPI** 0.115+ (Python 3.10–3.14) |
+| **ORM & Database** | **SQLAlchemy 2.0**, **Alembic**, PostgreSQL 16 / SQLite |
+| **Auth & Security** | **Argon2id** (`argon2-cffi`), **PyJWT** (HS256), rotating httpOnly Cookies |
+| **Data Validation** | **Pydantic v2** & `pydantic-settings` |
+| **Frontend Framework** | **React 19**, **TypeScript 6**, **Vite 8** |
+| **Styling & Icons** | **Tailwind CSS v4**, **Lucide React** |
+| **Data Visualization** | **Recharts 3.x** |
+| **Testing** | **Pytest** (Backend - 238 tests), **Vitest** (Frontend) |
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Python 3.10 or higher
+- Node.js 18 or higher & npm
+- Git
+
+### 1. Clone the Repository
 ```bash
-# Backend
+git clone https://github.com/dikshadewangan21/Smart-Expense-Tracker.git
+cd Smart-Expense-Tracker
+```
+
+### 2. Backend Setup
+```bash
 cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp ../.env.example .env        # set JWT_SECRET; use COOKIE_SECURE=false for http://localhost
-.venv/bin/alembic upgrade head
-.venv/bin/uvicorn app.main:app --reload     # API docs at http://localhost:8000/docs
 
-# Frontend
-cd frontend && npm install && npm run dev   # http://localhost:5173
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Linux / macOS:
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp ../.env.example .env
+# Edit .env to set your JWT_SECRET (e.g. generate with: openssl rand -hex 32)
+# For local dev, ensure COOKIE_SECURE=false
+
+# Run migrations
+alembic upgrade head
+
+# Start backend server
+uvicorn app.main:app --reload
 ```
-All API routes live under `/api`. The Vite dev server proxies `/api` to the backend, so the refresh cookie is same-origin and browser page URLs like `/transactions` are never confused with API calls.
+The backend API will be available at `http://localhost:8000`. Interactive OpenAPI documentation is accessible at `http://localhost:8000/docs`.
 
-## Demo data
+### 3. Frontend Setup
+Open a new terminal window:
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start Vite dev server
+npm run dev
+```
+The frontend application will be running at `http://localhost:5173`. The Vite proxy automatically routes all `/api` requests to the FastAPI backend.
+
+---
+
+## 🎭 Demo Mode
+
+The application includes a deterministic demo seeder containing ~7 months of realistic financial transactions, recurring subscriptions, EMIs, and bills ending on the current date:
+
 ```bash
 cd backend
-.venv/bin/python -m app.seed.demo seed     # creates demo@example.com with ~7 months of data, prints a random password
-.venv/bin/python -m app.seed.demo status | reset | delete
-ENABLE_DEMO=true .venv/bin/uvicorn app.main:app   # demo sign-in only works with this set
-```
-The seed is deterministic, shifts to today's date, and refuses to touch a non-demo account that holds the same email. Optional `--password`.
 
-## Tests
+# Seed demo user (demo@example.com)
+.venv/bin/python -m app.seed.demo seed
+
+# Check demo status
+.venv/bin/python -m app.seed.demo status
+
+# Reset or delete demo data
+.venv/bin/python -m app.seed.demo reset
+.venv/bin/python -m app.seed.demo delete
+```
+
+> **Security Note:** Demo user sign-in is strictly disabled in production. To allow signing into the demo account, run the backend with `ENABLE_DEMO=true`.
+
+---
+
+## 🧪 Testing
+
+### Backend Test Suite
+The backend contains 238 automated tests covering financial math, transaction scoping, authentication security, and all phase services:
+
 ```bash
-cd backend && .venv/bin/python -m pytest -q                    # SQLite, in memory
-# PostgreSQL: create a database, `alembic upgrade head` against it, then
-TEST_DATABASE_URL=postgresql+psycopg://user:pw@localhost:5432/dbname .venv/bin/python -m pytest -q
+cd backend
+
+# Run with SQLite (in-memory)
+.venv/bin/pytest
+
+# Run with PostgreSQL (optional)
+TEST_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/test_db .venv/bin/pytest
 ```
-The PostgreSQL run truncates every table between tests: use a throwaway database.
-Frontend: `cd frontend && npx tsc -b && npm run build`. There are no automated frontend tests yet.
 
-## API reference (Phases 3-4)
-Full details, algorithms and examples: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#8-phase-3-analytics-recurring-payments-and-bills) and [section 9](docs/ARCHITECTURE.md#9-phase-4-goals-debts-and-net-worth). Interactive docs at `/docs`.
+### Frontend Test Suite
+```bash
+cd frontend
 
-## Design decisions and known limitations
-- **Money is `NUMERIC(14,2)` in the database.** Endpoints that return computed dicts (dashboard, analytics, upcoming, calendar) emit JSON numbers; endpoints with Pydantic `Decimal` models (bills, recurring, candidates) emit strings. The client normalises with `num()`. Do not do arithmetic on API values in the client.
-- **Total balance** = sum of opening balances + all income − all expenses. Transfers are ignored in that total.
-- **Net worth** counts only transactions attached to an account; unassigned transactions are reported, not counted. The trend is rebuilt from current opening balances, valuations and transactions (no snapshots), so it is only as right as those inputs.
-- **Debts:** interest in a default payment split is a one-month estimate (balance x rate / 1200), not a lender statement. Undoing a debt payment restores the debt but keeps the expense it created. A credit-card debt plus a credit-card account double counts in net worth (the UI warns).
-- **Goals** are not part of net worth; contributions are not transactions.
-- **Health score** weights (savings 30, budget 25, recurring load 15, debt burden 15, emergency fund 15) are my own choices, documented in `services/dashboard.py`. Components lacking data are skipped and the total rescales. It is a heuristic, not financial advice. "Cash-flow stability" from the spec is not yet included.
-- **Rate limiter is per-process memory.** With more than one worker or instance, limits are per instance; use Redis.
-- **Deployment:** `frontend/vercel.json` rewrites `/api/*` to the backend so the cookie stays same-origin. Replace `YOUR-BACKEND-HOST` with your Render/Railway host. Not deployed or tested by me.
-- **UI kit:** shadcn/ui from the spec is not installed yet; components are hand-written with Tailwind tokens for now.
-- **Migrations** are verified up/down/up on PostgreSQL 16 and SQLite, and the full suite passes on both.
-- Account Aggregator / direct bank or UPI access will never be implied; imports will be CSV/manual only.
-- **Timezone:** each user has a timezone (default Asia/Kolkata) used for "today"; change it in Settings. A stored invalid zone falls back to Asia/Kolkata.
-- **Currency:** analytics, recurring and calendar sum only the user's own currency; other-currency transactions are counted and reported ("excluded"), not converted. The Phase 1 dashboard cards are not currency-filtered.
-- **Credit-card bills:** paying a credit-card bill with "also record as expense" counts card purchases twice (purchase and payment). The pay dialog warns; untick the box to avoid it.
-- **Overdue by several cycles:** each payment clears one cycle.
-- **Recurring detection** is heuristic (see architecture doc); one record per merchant per direction.
-- **Rate limiter vs. dev:** 30 refreshes per 5 minutes per IP; a test that reloads the page dozens of times will hit it.
+# Run Vitest unit tests
+npm test
+
+# Production build check
+npm run build
+```
+
+---
+
+## 📡 API Overview
+
+All endpoints are mounted under the `/api` prefix:
+
+| Group | Endpoints | Description |
+| :--- | :--- | :--- |
+| **Auth** | `POST /api/auth/register`<br>`POST /api/auth/login`<br>`POST /api/auth/logout`<br>`GET /api/auth/me`<br>`POST /api/auth/onboarding` | Authentication, token rotation, and onboarding |
+| **Dashboard** | `GET /api/dashboard` | Computed financial summaries, health score, and insights |
+| **Transactions** | `GET /api/transactions`<br>`POST /api/transactions`<br>`PUT /api/transactions/{id}`<br>`DELETE /api/transactions/{id}`<br>`POST /api/transactions/{id}/duplicate` | CRUD transactions, pagination, and multi-filters |
+| **AI Coach** | `POST /api/coach/chat`<br>`GET /api/coach/conversations`<br>`POST /api/coach/quick-add`<br>`GET /api/coach/nl-search` | AI Money Coach and natural language input |
+| **Imports & OCR** | `POST /api/imports/preview`<br>`POST /api/imports/execute`<br>`POST /api/receipts/upload`<br>`POST /api/receipts/{id}/confirm` | CSV statement ingestion and receipt scanner |
+| **Planning** | `GET /api/budgets`<br>`POST /api/budgets`<br>`GET /api/categories`<br>`GET /api/planning/safe-to-spend`<br>`GET /api/planning/timeline` | Budgets, categories, safe-to-spend & 60-day cashflow |
+| **Shared** | `GET /api/shared/groups`<br>`POST /api/shared/groups`<br>`POST /api/shared/groups/{id}/expenses` | Shared finance groups, splits, and settlement calculation |
+| **Notifications** | `GET /api/notifications`<br>`POST /api/notifications/evaluate`<br>`POST /api/notifications/read-all` | Proactive alerts for bills and budgets |
+| **Bills & Recurring** | `GET /api/bills`<br>`POST /api/bills/{id}/pay`<br>`GET /api/recurring`<br>`GET /api/calendar` | Bill management, recurring detection, and calendar |
+| **Goals & Debts** | `GET /api/goals`<br>`POST /api/goals/{id}/contributions`<br>`GET /api/debts`<br>`POST /api/debts/{id}/payments` | Savings targets and loan repayment simulations |
+| **Privacy** | `GET /api/privacy/export/csv`<br>`GET /api/privacy/export/json`<br>`GET /api/privacy/audit-logs`<br>`POST /api/privacy/delete-account` | Data takeout, spreadsheet export, and account deletion |
+
+Interactive documentation is available at `http://localhost:8000/docs`.
+
+---
+
+## 🔒 Security & Privacy Architecture
+
+- **Argon2id Password Hashing:** State-of-the-art password derivation resistant to GPU/ASIC attacks.
+- **Short-Lived Access Tokens:** 15-minute JWT tokens stored exclusively in client memory (never in `localStorage`).
+- **Rotating Refresh Tokens:** 7-day refresh tokens stored in `httpOnly`, `SameSite=Lax`, `Secure` cookies with cryptographic family revocation upon reuse detection.
+- **Multi-Tenant Data Isolation:** Every database query is explicitly scoped by authenticated `user_id`. Cross-user data leakage is strictly prevented.
+- **Rate Limiting:** Sliding-window rate limiters prevent brute-force attacks on authentication endpoints.
+- **Audit Logging:** Sensitive actions (profile updates, account deletion, bill payments) are logged to the `audit_logs` table.
+
+---
+
+## 📄 License
+
+This project is open-source software licensed under the **[MIT License](LICENSE)**.
